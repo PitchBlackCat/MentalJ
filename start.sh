@@ -6,4 +6,4 @@ mvn package;
 echo;
 echo "-= Running =-";
 echo;
-mvn -q exec:java
+mvn -q exec:java -Dexec.args="$@"
