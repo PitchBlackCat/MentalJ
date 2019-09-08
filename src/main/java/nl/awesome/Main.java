@@ -77,38 +77,7 @@ public class Main {
 
     public static void main(String[] args) {
         factory.HiddenLayerNeurons = asList(10, 5, 10);
-
-        double[] input = new double[]{0.0, 0.0};
-
-        factory.HiddenLayerNeurons = asList(80, 100, 50, 50);
-        Network n = factory.CreateNetwork(2, 2);
-
-        List<Neuron> inputs = n.GetNeuronsOf(NeuronType.I).collect(toList());
-        for (int i = 0; i < input.length; i++) {
-            inputs.get(i).setValue(input[i]);
-        }
-
-        Utils.benchmark("network", 1,
-                () -> {
-                    n.GetNeuronsOf(NeuronType.I).forEach(ne -> ne.setValue(Math.random()));
-                    n.GetNeuronsOf(NeuronType.O)
-                            .map(Neuron::getValue)
-                            .map(String::valueOf)
-                            .collect(joining(" "));
-                },
-                () -> n.print()
-        );
-
-        CompiledNetwork cn = Compiler.compile(n);
-        Utils.benchmark("matrix", 10, () -> {
-                    Arrays.stream(cn.feedforward(new double[]{Math.random(), Math.random()}))
-                            .mapToObj(String::valueOf)
-                            .collect(joining(" "));
-                },
-                () -> cn.print()
-        );
-
-        //startServer();
+        startServer();
     }
 
     private static void startServer() {
