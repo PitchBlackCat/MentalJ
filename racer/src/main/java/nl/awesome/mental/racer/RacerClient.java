@@ -1,20 +1,24 @@
 package nl.awesome.mental.racer;
 
 import nl.awesome.neural.Network;
+import nl.awesome.neural.NeuralSettings;
 import nl.awesome.neural.Serializer;
 import nl.awesome.neural.compiler.CompiledNetwork;
 import nl.awesome.neural.compiler.Compiler;
 import nl.awesome.neural.factory.HiddenLayerNetworkFactory;
 import nl.awesome.socket.Client;
 import nl.awesome.utils.ListUtils;
+import nl.awesome.utils.Rando;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
@@ -31,7 +35,7 @@ public class RacerClient {
     private static final String next_gen = "NEXT_GEN";
     private static final String game_ready = "GAME_READY";
     private static final String update = "UPDATE";
-    private static final HiddenLayerNetworkFactory factory = new HiddenLayerNetworkFactory();
+    public static final HiddenLayerNetworkFactory factory = new HiddenLayerNetworkFactory();
     private static final ExecutorService executor = Executors.newFixedThreadPool(32);
     public static List<CompiledNetwork> compiled = new ArrayList<>();
     public static List<Network> networks = new ArrayList<>();
@@ -39,22 +43,21 @@ public class RacerClient {
     public static Client client;
     public static String mode = IDLE;
     private static int numPlayers = 80;
-    private static int topPlayers = 10;
     private static int generation = 0;
     private static boolean debug = false;
 
-    public static void startServer(String host, int port, int initialPlayers, int topPlayers, List<Integer> hiddenLayers) {
+    public static void startServer(String host, int port) {
         client = new Client(host, port);
         client.init();
 
-        factory.HiddenLayerNeurons = hiddenLayers;
-        logger.info("Hidden layers: {}", hiddenLayers.stream().map(Object::toString).collect(joining(" ")));
-
-        numPlayers = initialPlayers;
-        RacerClient.topPlayers = topPlayers;
+        numPlayers = RacerSettings.initialPlayers;
 
         startGame(2);
         while (true) {
+            if (mode.equals(LISTENING)) {
+                Fps.update();
+            }
+
             String s = client.read();
             if (s == null) continue;
 
@@ -82,7 +85,7 @@ public class RacerClient {
                         case update:
                             int id = Integer.parseInt(parts[1]);
                             CompiledNetwork network = compiled.get(id);
-                            executor.execute(new CalculateAndSend(parts, id, network, client));
+                            executor.execute(new FeedForward(parts, id, network, client));
                             break;
                         case next_gen:
                             nextGen(parts);
@@ -111,7 +114,7 @@ public class RacerClient {
         compiled.add(Compiler.compile(network));
 
         logger.info("[PLAYER] parent: {}, id: {}, species: {}, in: {}, out: {}",
-                network.parentId, network.Id, network.Species, in, out
+                network.parentId, network.id, network.Species, in, out
         );
 
         if (networks.size() == numPlayers) {
@@ -128,7 +131,7 @@ public class RacerClient {
     public static void nextGen(String[] parts) {
         pending = new ArrayList<>();
 
-        int top = topPlayers;
+        int top = RacerSettings.topPlayers;
         int offspring = top;
 
         for (int i = 1; i < parts.length; i++) {
@@ -143,16 +146,14 @@ public class RacerClient {
                 .limit(top)
                 .collect(toList());
 
+        Serializer.Save(collect.get(0));
+
         Network child;
         for (int i = 0; i < collect.size(); i++) {
             Network parent = collect.get(i);
-            logger.info(
-                    "#{} id: {}, score: {}, best: {}, children: {}, genome: {}",
-                    i, parent.Id, parent.Fitness, parent.BestFitness, offspring, Serializer.Serialize(parent)
-            );
 
-            for (int n = 0; n < Math.ceil(offspring * 0.5) + 1; n++) {
-                child = factory.MutateNetwork(parent, (n * 2) + 1);
+            for (int n = 0; n < Rando.between(NeuralSettings.minMutations, NeuralSettings.maxMutations + (int)Math.ceil(offspring * 0.5)) + 1; n++) {
+                child = factory.cloneWithMutations(parent, offspring + 1);
                 pending.add(child);
             }
 
@@ -164,11 +165,6 @@ public class RacerClient {
 
         ListUtils.mapToPairs(collect).forEach(p -> {
             Network c = factory.Breed(p.getKey(), p.getValue());
-
-            logger.info(
-                    "[BREEDING] {} with {}, result: {}",
-                    p.getKey().Id, p.getValue().Id, c.Id
-            );
 
             pending.add(c);
         });
@@ -182,6 +178,9 @@ public class RacerClient {
     }
 
     public static void setPlayers(int num) {
+        RacerSettings.print();
+        NeuralSettings.print();
+
         setMode(WAITING_FOR_PLAYERS);
         client.send("PLAYERS " + num);
     }

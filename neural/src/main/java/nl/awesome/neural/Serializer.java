@@ -2,18 +2,42 @@ package nl.awesome.neural;
 
 import nl.awesome.neural.neuron.*;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Serializer {
     public static String Serialize(Network network) {
         List<String> data = new ArrayList<String>();
-        data.add("" + network.Id);
+        data.add("" + network.id);
         data.add("" + network.Species);
         data.add("" + network.BestFitness);
         data.add(SerializeNeurons(network));
         data.add(SerializeGenome(network));
         return String.join(";", data);
+    }
+
+    public static void Save(Network network) {
+        try {
+            BufferedWriter writer = new BufferedWriter(new FileWriter("fittest.txt"));
+            writer.write(Serialize(network));
+            writer.write("\n");
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static Network Load() {
+        try {
+            BufferedReader reader = new BufferedReader(new FileReader("fittest.txt"));
+            Network n = Deserialize(reader.readLine());
+            reader.close();
+            return n;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     private static String SerializeNeurons(Network network) {
@@ -42,7 +66,6 @@ public class Serializer {
             Add(c, network.Neurons.indexOf(gene.In));
             Add(c, network.Neurons.indexOf(gene.Out));
             Add(c, gene.Weight);
-            Add(c, gene.Inversed);
             Add(c, gene.Enabled);
             data.add(String.join(":", c));
         }
@@ -53,12 +76,12 @@ public class Serializer {
         String[] data = str.split(";");
         Network network = new Network();
 
-        network.Id = Integer.parseInt(data[0]);
+        network.id = Integer.parseInt(data[0]);
         network.Species = Integer.parseInt(data[1]);
         network.BestFitness = Float.parseFloat(data[2]);
 
         Network.SpeciesGenerated = Math.max(Network.SpeciesGenerated, network.Species);
-        Network.NetworksGenerated = Math.max(Network.NetworksGenerated, network.Id);
+        Network.NetworksGenerated = Math.max(Network.NetworksGenerated, network.id);
 
         for (String neuronData : data[3].split(",")) {
             String[] info = neuronData.split(":");
@@ -93,8 +116,7 @@ public class Serializer {
             gene.In = network.Neurons.get(Integer.parseInt(info[1]));
             gene.Out = network.Neurons.get(Integer.parseInt(info[2]));
             gene.Weight = Double.parseDouble(info[3]);
-            gene.Inversed = Boolean.parseBoolean(info[4]);
-            gene.Enabled = Boolean.parseBoolean(info[5]);
+            gene.Enabled = Boolean.parseBoolean(info[4]);
 
             gene.Out.In.add(gene);
 

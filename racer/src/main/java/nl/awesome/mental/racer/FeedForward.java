@@ -7,14 +7,14 @@ import java.util.Arrays;
 
 import static java.util.stream.Collectors.joining;
 
-public class CalculateAndSend implements Runnable {
+public class FeedForward implements Runnable {
 
     private final Client client;
     private final int id;
     private final CompiledNetwork network;
     private final String[] parts;
 
-    public CalculateAndSend(String[] parts, int id, CompiledNetwork network, Client client) {
+    public FeedForward(String[] parts, int id, CompiledNetwork network, Client client) {
         this.parts = parts;
         this.id = id;
         this.network = network;
@@ -23,6 +23,8 @@ public class CalculateAndSend implements Runnable {
 
     @Override
     public void run() {
+        Fps.put(network);
+
         double[] d = new double[parts.length - 2];
         for (int i = 2; i < parts.length; i++) {
             d[i - 2] = Double.parseDouble(parts[i]);

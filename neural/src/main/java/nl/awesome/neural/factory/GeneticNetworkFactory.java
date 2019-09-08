@@ -26,15 +26,15 @@ public class GeneticNetworkFactory extends NetworkFactory {
 
         currentLayer = CreateLayer(NeuronType.O, 1, outputs, false);
         network.Neurons.addAll(currentLayer);
-        network.Genome.addAll(ConnectLayers(previousLayer, currentLayer, false));
+        network.Genome.addAll(ConnectLayers(previousLayer, currentLayer));
         return network;
     }
 
     @Override
-    public Network MutateNetwork(Network source, int times) {
+    public Network cloneWithMutations(Network source, int times) {
         Network network = Serializer.Clone(source);
-        network.parentId = network.Id;
-        network.Id = ++Network.NetworksGenerated;
+        network.parentId = network.id;
+        network.id = ++Network.NetworksGenerated;
 
         if (Math.random() > .9) {
             if (
@@ -49,8 +49,8 @@ public class GeneticNetworkFactory extends NetworkFactory {
         }
 
         Lottery<Gene> geneMutations = new Lottery<Gene>()
-                .add(.1f, Mutations::TweakGene)
-                .add(.1f, Mutations::RandomizeGene)
+                .add(.1f, Mutations::TweakGenes)
+                .add(.1f, Mutations::RandomizeGenes)
                 .add(.02f, Mutations::ToggleGene);
 
         while(times-- > 0) {

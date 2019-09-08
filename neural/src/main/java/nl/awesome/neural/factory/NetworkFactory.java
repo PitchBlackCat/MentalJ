@@ -1,19 +1,21 @@
 package nl.awesome.neural.factory;
 
-import nl.awesome.neural.Gene;
-import nl.awesome.neural.Network;
-import nl.awesome.neural.NeuronType;
-import nl.awesome.neural.Serializer;
+import nl.awesome.neural.*;
 import nl.awesome.neural.neuron.*;
+import nl.awesome.utils.Rando;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public abstract class NetworkFactory {
+    public static final Logger logger = LogManager.getLogger(NetworkFactory.class);
+
     public abstract Network CreateNetwork(int inputs, int outputs);
 
-    public abstract Network MutateNetwork(Network source, int times);
+    public abstract Network cloneWithMutations(Network source, int times);
 
     List<Neuron> CreateLayer(NeuronType type, int layer, int count, boolean addBias) {
         ArrayList<Neuron> l = new ArrayList<>();
@@ -54,19 +56,18 @@ public abstract class NetworkFactory {
         return t;
     }
 
-    List<Gene> ConnectLayers(List<Neuron> layerI, List<Neuron> layerO, boolean inversed) {
+    List<Gene> ConnectLayers(List<Neuron> layerI, List<Neuron> layerO) {
         return layerI.stream().flatMap(i ->
-                layerO.stream().map(o -> ConnectNeurons(i, o, inversed))
+                layerO.stream().map(o -> ConnectNeurons(i, o))
         ).collect(Collectors.toList());
     }
 
-    public Gene ConnectNeurons(Neuron i, Neuron o, boolean inversed) {
+    public Gene ConnectNeurons(Neuron i, Neuron o) {
         Gene gene = new Gene();
         gene.In = i;
         gene.Out = o;
-        gene.Weight = (Math.random() * 10) - 5;
+        gene.Weight = Rando.max(NeuralSettings.initialGeneWeights * 2) - NeuralSettings.initialGeneWeights;
         gene.Enabled = true;
-        gene.Inversed = inversed;
         gene.Out.In.add(gene);
         return gene;
     }
@@ -75,7 +76,7 @@ public abstract class NetworkFactory {
         if (a.Species != b.Species) throw new RuntimeException("networks not compatible!");
 
         Network c = Serializer.Clone(a);
-        c.Id = Network.NetworksGenerated++;
+        c.id = Network.NetworksGenerated++;
 
         for (int i = 0; i < c.Genome.size(); i++) {
             Gene ga = a.Genome.get(i);
@@ -91,6 +92,11 @@ public abstract class NetworkFactory {
                 gc.Innovation++;
             }
         }
+
+        logger.info(
+                "[BREEDING] {} with {} into {}",
+                a.id, b.id, c.id
+        );
 
         return c;
     }

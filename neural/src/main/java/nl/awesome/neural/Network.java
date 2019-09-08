@@ -17,13 +17,13 @@ public class Network {
 
     public static Network Create() {
         Network n = new Network();
-        n.Id = ++NetworksGenerated;
+        n.id = ++NetworksGenerated;
         return n;
     }
 
     public float Fitness = 0;
     public float BestFitness = 0;
-    public int Id = 0;
+    public int id = 0;
     public int parentId = 0;
     public int Species = 0;
 
@@ -51,7 +51,7 @@ public class Network {
     }
 
     public void print() {
-        logger.info("| Network {}", Id);
+        logger.info("| Network {}", id);
         Neurons.forEach(n -> logger.info("| {}{}: {}", n.getType(), Neurons.indexOf(n), String.format("%5.5s", n.getValue())));
         for (int i = 0; i < Genome.size(); i++) {
             Gene g = Genome.get(i);
