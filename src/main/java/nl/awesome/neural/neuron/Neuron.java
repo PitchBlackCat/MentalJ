@@ -22,6 +22,10 @@ public abstract class Neuron {
         return 1 / (1 + Math.exp(-d));
     }
 
+    public static double Relu(double d) {
+        return Math.max(0, d);
+    }
+
     public int getLayer() {
         return layer;
     }

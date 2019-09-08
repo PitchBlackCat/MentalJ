@@ -64,7 +64,7 @@ public abstract class NetworkFactory {
         Gene gene = new Gene();
         gene.In = i;
         gene.Out = o;
-        gene.Weight = Math.random() * 20 - 10;
+        gene.Weight = Math.random();
         gene.Enabled = true;
         gene.Inversed = inversed;
         gene.Out.In.add(gene);
